@@ -102,10 +102,12 @@ def node_synthesize_hypothesis(state: AgentState):
     top_cause = max(probs, key=probs.get)
     confidence = probs[top_cause]
     
+    # FIX: Map the causal variable names to the exact Neo4j property keys
     trace_key = top_cause.lower()
     if top_cause == 'DyeLotQuality': trace_key = 'dye_lot_quality'
     elif top_cause == 'YarnQuality': trace_key = 'yarn_quality'
     elif top_cause == 'VisualMicrostructure': trace_key = 'batch_status'
+    elif top_cause == 'MachineTension': trace_key = 'tension'
     
     observed_value = trace.get(trace_key, 'Unknown')
     

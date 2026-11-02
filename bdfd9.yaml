@@ -1,0 +1,18 @@
+# bdfd9.yaml
+path: /app/data/raw/BDFD9 Bangladesh Centric Fabric Defect Dataset/BDFD9 # absolute path inside docker
+
+train: train/images  # relative to 'path'
+val: valid/images    # relative to 'path'
+test: test/images    # relative to 'path'
+
+# Classes (You must adjust this to match the exact class list in the dataset's data.yaml)
+names:
+  0: DropStitch
+  1: Hole
+  2: OilSpot
+  3: Slub
+  4: Stain
+  5: Crease
+  6: Knot
+  7: LooseYarn
+  8: Snag

@@ -1,5 +1,7 @@
-neo4j
+neo4j==5.20.0
 pandas
 scikit-learn
 langgraph
 pgmpy
+ultralytics
+pyyaml

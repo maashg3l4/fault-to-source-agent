@@ -1,0 +1,18 @@
+Default:
+  causal_state: Degraded
+  causal_variable: VisualMicrostructure
+DropStitch:
+  causal_state: Degraded
+  causal_variable: VisualMicrostructure
+Hole:
+  causal_state: Degraded
+  causal_variable: VisualMicrostructure
+Knot:
+  causal_state: Degraded
+  causal_variable: VisualMicrostructure
+Oil Spot:
+  causal_state: Bad
+  causal_variable: DyeLotQuality
+Yarn Dust:
+  causal_state: Poor
+  causal_variable: YarnQuality

@@ -1,0 +1,13 @@
+data/
+!data/.gitkeep
+*.pt
+*.pth
+*.onnx
+models/
+!models/.gitkeep
+# Ignore zip files in the root directory
+*.zip
+BDFD9_dataset.zip
+
+# Ignore Python cache
+__pycache__/
