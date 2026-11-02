@@ -25,15 +25,16 @@ Successfully validated the end-to-end pipeline on a messy, real-world factory QC
 - **Data Completeness Audit:** The agent explicitly flags missing sensor data in the final hypothesis (e.g., `⚠️ WARNING: Missing MachineTension_Sensor`), ensuring the Quality Manager knows exactly what evidence is missing before making a CAPA decision.
 
 ### 2. Industrial Benchmark Validation (causRCA Dataset)
-To prove the architecture is domain-agnostic, the engine was validated against the **causRCA dataset** (an expert-validated industrial CNC machining benchmark with 92 variables and 104 causal edges).
+To prove the architecture is domain-agnostic, the engine was validated against the **causRCA dataset** (an expert-validated industrial CNC machining benchmark).
 - **Graph Ingestion:** Loaded the 92-node expert causal graph into Neo4j.
 - **Digital Twin Reconstruction:** Reconstructed a real-time machine state from event-based telemetry (54 active variables at the time of alarm).
-- **Advanced RCA:** Engineered a Cypher-based traversal algorithm that filters out generic alarms (e.g., stack lights) and ranks root causes by **Explanatory Power** (the number of specific anomalies they explain).
+- **Hybrid Dual-Engine Diagnosis:**
+  1. **Structural RCA (Neo4j):** Traverses the graph to filter out control-variable confounders and identifies physical root causes based on explanatory power (number of cascading anomalies).
+  2. **Statistical RCA (pgmpy):** Learns CPDs from 10,000+ real telemetry timestamps using Bayesian Estimation (BDeu smoothing) and performs exact posterior inference to validate observed sensor states.
 
 **Sample causRCA Output (Coolant System Fault Scenario):**
-*   `MPA_toInitPos` (Explains 9 cascading reset anomalies)
-*   `HP_Pump_Ok` (Explains 4 pressure anomalies)
-*   `CLT_Level_lt_Min` (Explains 2 direct coolant anomalies) ✅ *Correctly identifies the fault domain.*
+*   **Structural Engine:** `LP_Pump_Ok` (Explains 4 cascading anomalies)
+*   **Bayesian Engine:** `LP_Pump_On = False` (Directly Observed) ✅ *Confirms the structural hypothesis.*
 
 ### 3. Vision Model Performance
 - **Model:** YOLOv8n (Edge-optimized)
@@ -42,8 +43,8 @@ To prove the architecture is domain-agnostic, the engine was validated against t
 
 ## 🛠️ Tech Stack
 - **Infrastructure:** Docker, Docker Compose, WSL2
-- **Databases:** Neo4j (Graph), PostgreSQL (Relational - planned)
-- **AI/ML:** YOLOv8 (Ultralytics), PyTorch, pgmpy (Bayesian Inference), LangGraph (Agentic Orchestration), scikit-learn, pandas
+- **Databases:** Neo4j (Graph)
+- **AI/ML:** YOLOv8 (Ultralytics), PyTorch, pgmpy (Bayesian Inference), LangGraph (Agentic Orchestration), NetworkX, scikit-learn, pandas
 - **Backend/API:** FastAPI (planned), Streamlit (planned)
 
 ## 🚀 Quick Start
@@ -55,16 +56,20 @@ To prove the architecture is domain-agnostic, the engine was validated against t
 4. **Run the causRCA Industrial Benchmark:**
    - `docker compose exec app python ingest_causrca.py` (Loads 92-node graph and telemetry)
    - `docker compose exec app python diagnose_cnc_fault.py` (Traces causal paths for CNC faults)
+   - `docker compose exec app python learn_cpds.py` (Learns data-driven CPDs via BDeu smoothing)
+   - `docker compose exec app python hybrid_diagnosis.py` (Runs dual-engine Graph + Bayesian diagnosis)
 
 ## 📂 Project Structure
 - `agent_engine.py`: LangGraph state machine & Bayesian inference with missing-data audit.
 - `edge_inference.py`: Modality bridge (YOLO to Causal Evidence).
 - `ingest_csv.py` / `run_full_pipeline.py`: Textile MVP scripts.
-- `ingest_causrca.py` / `diagnose_cnc_fault.py`: Industrial CNC benchmark scripts.
+- `ingest_causrca.py` / `diagnose_cnc_fault.py`: Industrial CNC graph ingestion and traversal.
+- `learn_cpds.py`: Trains the Bayesian Network from real telemetry using Bayesian Estimation.
+- `hybrid_diagnosis.py`: Dual-engine diagnosis combining Graph RCA and Bayesian inference.
 - `train_vision.py`: YOLOv8 training script (Colab-compatible).
 - `docker-compose.yml`: Container orchestration.
 
 ## 📈 Future Roadmap
-1. **Counterfactual Engine (L3):** Implement `do`-calculus in `pgmpy` to simulate interventions (e.g., "If we recalibrate tension, defect probability drops 42%").
-2. **Streamlit Dashboard:** Build the Human-in-the-Loop UI for Quality Managers.
+1. **Streamlit Dashboard:** Build the Human-in-the-Loop UI for Quality Managers to visualize the dual-engine diagnosis.
+2. **Counterfactual Engine (L3):** Implement `do`-calculus in `pgmpy` to simulate interventions (e.g., "If we recalibrate tension, defect probability drops 42%").
 3. **Edge Optimization:** Quantize YOLOv8 to TensorRT for Jetson deployment.
