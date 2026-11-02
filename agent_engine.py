@@ -52,20 +52,40 @@ class AgentState(TypedDict):
 
 # --- 4. Define Deterministic Tools ---
 def fetch_traceability_data(defect_id: str) -> Dict:
+    # Query matches the CSV ingestion schema
     query = """
-    MATCH (d:DefectRecord {defect_id: $defect_id})-[:CAUSED_BY]->(b:FabricBatch)
-    MATCH (b)<-[:SUPPLIED]-(s:Supplier)
-    MATCH (d)-[:OCCURRED_ON]->(m:Machine)
-    MATCH (d)-[:OCCURRED_IN]->(e:Environment)
-    MATCH (d)-[:INVOLVES_MATERIAL]->(mat:Material)
-    MATCH (d)-[:AFFECTED_BY_DYE]->(dye:DyeLot)
-    RETURN d.type AS defect_type, b.status AS batch_status, s.name AS supplier_name, 
-           m.tension AS tension, e.humidity AS humidity, 
-           mat.yarn_quality AS yarn_quality, dye.quality AS dye_lot_quality
+    MATCH (d:DefectRecord {defect_id: $defect_id})
+    OPTIONAL MATCH (d)-[:CAUSED_BY]->(b:DyeLot)
+    OPTIONAL MATCH (d)-[:OCCURRED_ON]->(m:Machine)
+    OPTIONAL MATCH (d)-[:DETECTED_ON]->(r:FabricRoll)
+    RETURN d.type AS defect_type, 
+           b.id AS batch_id, 
+           b.temperature AS temperature,
+           m.id AS machine_id,
+           r.id AS roll_id
     """
     with driver.session() as session:
         result = session.run(query, defect_id=defect_id).single()
-        return dict(result) if result else {}
+        if not result:
+            return {}
+        
+        data = dict(result)
+        missing_evidence = []
+
+        # Feature Engineering: Map Temp to Causal State
+        temp = data.get('temperature')
+        if temp is not None:
+            data['dye_lot_quality'] = 'Bad' if float(temp) > 90.0 else 'Good'
+        else:
+            data['dye_lot_quality'] = 'Good'
+            missing_evidence.append("DyeLotTemperature")
+            
+        # Default missing tension, but flag it
+        data['tension'] = 'High' 
+        missing_evidence.append("MachineTension_Sensor")
+        
+        data['missing_evidence'] = missing_evidence
+        return data
 
 # --- 5. Define Graph Nodes ---
 def node_fetch_context(state: AgentState):
@@ -88,7 +108,7 @@ def node_causal_inference(state: AgentState):
     probs = {}
     for var in query_vars:
         posterior = infer.query(variables=[var], evidence=evidence)
-        probs[var] = float(posterior.values[1]) # Probability of the "Bad" state
+        probs[var] = float(posterior.values[1])
         
     return {"causal_probabilities": probs}
 
@@ -102,7 +122,6 @@ def node_synthesize_hypothesis(state: AgentState):
     top_cause = max(probs, key=probs.get)
     confidence = probs[top_cause]
     
-    # FIX: Map the causal variable names to the exact Neo4j property keys
     trace_key = top_cause.lower()
     if top_cause == 'DyeLotQuality': trace_key = 'dye_lot_quality'
     elif top_cause == 'YarnQuality': trace_key = 'yarn_quality'
@@ -112,6 +131,12 @@ def node_synthesize_hypothesis(state: AgentState):
     observed_value = trace.get(trace_key, 'Unknown')
     
     hypothesis = f"Bayesian inference identifies {top_cause} as the primary driver (p={confidence:.2f}). Observed state: {observed_value}."
+    
+    # Add missing data warning
+    missing = trace.get('missing_evidence', [])
+    if missing:
+        hypothesis += f" ⚠️ WARNING: Inferred using incomplete data. Missing: {', '.join(missing)}."
+        
     citations = [f"{top_cause}: {observed_value}"]
 
     return {"hypothesis": hypothesis, "confidence": confidence, "evidence_citations": citations}

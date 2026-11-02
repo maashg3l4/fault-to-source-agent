@@ -1,0 +1,7 @@
+Roll No,Batch,Machine,Defect Type,Defect Code,Temp_C
+R-1042,D-221,L-14,Shade Band,SB-01,92.5
+R-1043,D-221,L-14,Shade Band,SB-01,94.0
+R-1044,D-225,L-14,Shade Band,SB-01,88.0
+R-1045,D-221,L-15,Shade Band,SB-01,95.0
+R-1046,D-225,L-15,No Defect,,87.5
+R-1047,D-221,L-14,Shade Band,SB-01,93.5
