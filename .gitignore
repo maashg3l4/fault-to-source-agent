@@ -11,3 +11,6 @@ BDFD9_dataset.zip
 
 # Ignore Python cache
 __pycache__/
+# Datasets
+data/
+!data/.gitkeep
